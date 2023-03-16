@@ -132,11 +132,11 @@ class InteractiveTagSelector {
   addTag(tag) {
     const id = this.toNegative ? 'txt2img_neg_prompt' : 'txt2img_prompt'
     const textArea = gradioApp().getElementById(id).querySelector('textarea')
-    let mText = textArea.value
-    let mStart = textArea.selectionStart
+    let mTextLeft = textArea.value.slice(0, textArea.selectionStart)
+    let mTextRight = textArea.value.slice(textArea.selectionEnd)
     
-    for (let i = mStart; i > 0; i --) {
-        let mTextClip = mText.slice(i - 1, i)
+    for (let i = mTextLeft.length; i > 0; i --) {
+        let mTextClip = mTextLeft.slice(i - 1, i)
         if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
             if (! this.MY_CLIPR_CHARS.includes(mTextClip)) {
                 tag = ", " + tag
@@ -144,21 +144,22 @@ class InteractiveTagSelector {
             break
         }
     }
-    if (mStart === mText.length) {
-        tag = tag + ", "
-    } else {
-        for (let i = mStart; i < mText.length; i ++) {
-            let mTextClip = mText.slice(i, i + 1)
-            if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
-                if (! this.MY_CLIPL_CHARS.includes(mTextClip)) {
-                    tag = tag + ", "
-                }
-                break
+
+    for (let i = 0; i < mTextRight.length; i ++) {
+        let mTextClip = mTextRight.slice(i, i + 1)
+        if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
+            if (! this.MY_CLIPL_CHARS.includes(mTextClip)) {
+                tag = tag + ", "
             }
+            break
         }
     }
-    textArea.value = mText.slice(0, mStart) + tag + mText.slice(mStart)
-    textArea.selectionStart = mStart + tag.length
+    if (mTextRight.length === 0) {
+        tag = tag + ", "
+    }
+
+    textArea.value = mTextLeft + tag + mTextRight
+    textArea.selectionStart = mTextLeft.length + tag.length
     textArea.selectionEnd = textArea.selectionStart
     updateInput(textArea)
     

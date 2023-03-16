@@ -4,6 +4,9 @@ class InteractiveTagSelector {
   SELECT_ID = 'interactive-tag-selector-select'
   CONTENT_ID = 'interactive-tag-selector-content'
   TO_NEGATIVE_PROMPT_ID = 'interactive-tag-selector-to-negative-prompt'
+  MY_WHITE_CHARS = [' ', '\r', '\n']
+  MY_CLIPR_CHARS = [',', ':', "|", '(', '[', '{']
+  MY_CLIPL_CHARS = [',', ':', "|", ')', ']', '}']
 
   constructor(yaml, gradioApp) {
     this.yaml = yaml
@@ -24,14 +27,14 @@ class InteractiveTagSelector {
     } else {
       return Object.keys(tags).map((key) => {
         const values = tags[key]
-        const randomKey = `${prefix}:${key}`
+        const randomKey = `${prefix}/${key}`
 
         if (typeof values === 'string') { return this.createTagButton(key, values, 'secondary') }
 
         const group = document.createElement('div')
         group.classList.add('gr-block', 'gr-box', 'relative', 'w-full', 'border-solid', 'border', 'border-gray-200', 'flex', 'flex-col', 'col', 'flex-wrap', 'gap-2', 'p-2')
         group.style = `min-width: min(320px, 100%); flex-basis: 50%; flex-grow: 1;`
-        group.append(this.createTagButton(key, `@${randomKey}@`))
+        group.append(this.createTagButton(key, `__${randomKey}__`))
         group.insertAdjacentHTML('beforeend', '<div class="flex flex-col buttons"></div>')
 
         const buttons = group.querySelector('.buttons')
@@ -68,12 +71,12 @@ class InteractiveTagSelector {
         <div class="gr-block gr-box relative w-full border-solid border border-gray-200">
           <div class="flex flex-row flex-wrap w-full gap-2" style="align-items: center;">
             <select id="${this.SELECT_ID}" class="gr-box gr-input w-full" style="min-width: min(400px, 100%); flex: 3;">
-              <option>なし</option>
+              <option>无</option>
             </select>
             <div style="min-width: min(200px, 100%); flex: 1">
               <label class="flex items-center text-gray-700 text-sm space-x-2 rounded-lg cursor-pointer dark:bg-transparent">
                 <input type="checkbox" id="${this.TO_NEGATIVE_PROMPT_ID}" class="gr-check-radio gr-checkbox">
-                <span class="ml-2">ネガティブプロンプトに入力</span>
+                <span class="ml-2">写入到反向提示词</span>
               </label>
             </div>
           </div>
@@ -128,12 +131,39 @@ class InteractiveTagSelector {
 
   addTag(tag) {
     const id = this.toNegative ? 'txt2img_neg_prompt' : 'txt2img_prompt'
-    const textarea = gradioApp().getElementById(id).querySelector('textarea')
-
-    if (textarea.value.trim() !== '' && textarea.value.trim().slice(-1) !== ',') { textarea.value += ', ' }
-    textarea.value += tag
-
-    updateInput(textarea)
+    const textArea = gradioApp().getElementById(id).querySelector('textarea')
+    let mText = textArea.value
+    let mStart = textArea.selectionStart
+    
+    for (let i = mStart; i > 0; i --) {
+        let mTextClip = mText.slice(i - 1, i)
+        if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
+            if (! this.MY_CLIPR_CHARS.includes(mTextClip)) {
+                tag = ", " + tag
+            }
+            break
+        }
+    }
+    if (mStart === mText.length) {
+        tag = tag + ", "
+    } else {
+        for (let i = mStart; i < mText.length; i ++) {
+            let mTextClip = mText.slice(i, i + 1)
+            if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
+                if (! this.MY_CLIPL_CHARS.includes(mTextClip)) {
+                    tag = tag + ", "
+                }
+                break
+            }
+        }
+    }
+    textArea.value = mText.slice(0, mStart) + tag + mText.slice(mStart)
+    textArea.selectionStart = mStart + tag.length
+    textArea.selectionEnd = textArea.selectionStart
+    updateInput(textArea)
+    
+    textArea.focus({preventScroll: true})
+    gradioApp().getElementById(this.SELECT_ID).focus({preventScroll: true})
   }
 
   async parseFiles() {
@@ -161,7 +191,7 @@ onUiLoaded(async () => {
   const tags = await interactiveTagSelector.parseFiles()
 
   const button = document.createElement('button')
-  button.textContent = '🔯タグを選択'
+  button.textContent = '🔯提示词选择器'
   button.classList.add('gr-button', 'gr-button-sm', 'gr-button-secondary')
   button.style = 'margin-top: 0.5rem;'
 

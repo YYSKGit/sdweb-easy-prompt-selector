@@ -1,18 +1,21 @@
 class InteractiveTagSelector {
+
   PATH_FILE = 'tmp/interactiveTagSelector.txt'
   AREA_ID = 'interactive-tag-selector'
   SELECT_ID = 'interactive-tag-selector-select'
   CONTENT_ID = 'interactive-tag-selector-content'
-  TO_NEGATIVE_PROMPT_ID = 'interactive-tag-selector-to-negative-prompt'
+  NSFW_MODE_ID = 'interactive-tag-selector-nsfw-mode'
+
   MY_WHITE_CHARS = [' ', '\r', '\n']
-  MY_CLIPR_CHARS = [',', ':', "|", '(', '[', '{']
-  MY_CLIPL_CHARS = [',', ':', "|", ')', ']', '}']
+  MY_CLIPR_CHARS = [',', ':', '|', '(', '[', '{', '<']
+  MY_CLIPL_CHARS = [',', ':', '|', ')', ']', '}', '>']
 
   constructor(yaml, gradioApp) {
     this.yaml = yaml
     this.gradioApp = gradioApp
     this.visible = false
-    this.toNegative = false
+    this.nsfwMode = false
+    this.promptFocus = null
   }
 
   async readFile(filepath) {
@@ -22,6 +25,7 @@ class InteractiveTagSelector {
   }
 
   createTagButtons(tags, prefix = '') {
+    if (this.nsfwMode) { return null }
     if (Array.isArray(tags)) {
       return tags.map((tag) => this.createTagButton(tag, tag, 'secondary'))
     } else {
@@ -41,9 +45,12 @@ class InteractiveTagSelector {
         buttons.classList.add('gr-block', 'gr-box', 'relative', 'w-full', 'flex', 'flex-wrap')
         buttons.style = 'flex-direction: initial;'
 
-        this.createTagButtons(values, randomKey).forEach((button) => {
-          buttons.appendChild(button)
-        })
+        const myTags = this.createTagButtons(values, randomKey)
+        if (myTags !== null) {
+            myTags.forEach((button) => {
+              buttons.appendChild(button)
+            })
+        }
 
         return group
       })
@@ -75,8 +82,8 @@ class InteractiveTagSelector {
             </select>
             <div style="min-width: min(200px, 100%); flex: 1">
               <label class="flex items-center text-gray-700 text-sm space-x-2 rounded-lg cursor-pointer dark:bg-transparent">
-                <input type="checkbox" id="${this.TO_NEGATIVE_PROMPT_ID}" class="gr-check-radio gr-checkbox">
-                <span class="ml-2">写入到反向提示词</span>
+                <input type="checkbox" id="${this.NSFW_MODE_ID}" class="gr-check-radio gr-checkbox">
+                <span class="ml-2">只显示NSFW提示词</span>
               </label>
             </div>
           </div>
@@ -86,7 +93,7 @@ class InteractiveTagSelector {
     `
     const select = tagArea.querySelector(`#${this.SELECT_ID}`)
     const content = tagArea.querySelector(`#${this.CONTENT_ID}`)
-    const toNegativePromptCheckbox = tagArea.querySelector(`#${this.TO_NEGATIVE_PROMPT_ID}`)
+    const nsfwModeCheckbox = tagArea.querySelector(`#${this.NSFW_MODE_ID}`)
 
     Object.keys(tags).forEach((key) => {
       const values = tags[key]
@@ -101,9 +108,12 @@ class InteractiveTagSelector {
       container.classList.add('flex', 'flex-row', 'flex-wrap')
       container.style = 'display: none;'
 
-      this.createTagButtons(values, key).forEach((group) => {
-        container.appendChild(group)
-      })
+      const myTags = this.createTagButtons(values, key)
+      if (myTags !== null) {
+          myTags.forEach((group) => {
+            container.appendChild(group)
+          })
+      }
 
       content.appendChild(container)
     })
@@ -116,12 +126,22 @@ class InteractiveTagSelector {
       })
     })
 
-    toNegativePromptCheckbox.addEventListener('change', (event) => {
-      this.toNegative = event.target.checked
+    nsfwModeCheckbox.addEventListener('change', (event) => {
+      this.nsfwMode = event.target.checked
+      
     })
 
-
     gradioApp().getElementById('txt2img_toprow').after(tagArea)
+
+    const prompt = gradioApp().getElementById('txt2img_prompt').querySelector('textarea')
+    const promptNeg = gradioApp().getElementById('txt2img_neg_prompt').querySelector('textarea')
+    prompt.addEventListener('focus', () => {
+        this.promptFocus = prompt
+    })
+    promptNeg.addEventListener('focus', () => {
+        this.promptFocus = promptNeg
+    })
+    this.promptFocus = prompt
   }
 
   changeVisibility(node, visible) {
@@ -130,8 +150,7 @@ class InteractiveTagSelector {
   }
 
   addTag(tag) {
-    const id = this.toNegative ? 'txt2img_neg_prompt' : 'txt2img_prompt'
-    const textArea = gradioApp().getElementById(id).querySelector('textarea')
+    const textArea = this.promptFocus
     let mTextLeft = textArea.value.slice(0, textArea.selectionStart)
     let mTextRight = textArea.value.slice(textArea.selectionEnd)
     
@@ -139,7 +158,7 @@ class InteractiveTagSelector {
         let mTextClip = mTextLeft.slice(i - 1, i)
         if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
             if (! this.MY_CLIPR_CHARS.includes(mTextClip)) {
-                tag = ", " + tag
+                tag = ', ' + tag
             }
             break
         }
@@ -149,13 +168,13 @@ class InteractiveTagSelector {
         let mTextClip = mTextRight.slice(i, i + 1)
         if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
             if (! this.MY_CLIPL_CHARS.includes(mTextClip)) {
-                tag = tag + ", "
+                tag = tag + ', '
             }
             break
         }
     }
     if (mTextRight.length === 0) {
-        tag = tag + ", "
+        tag = tag + ', '
     }
 
     textArea.value = mTextLeft + tag + mTextRight

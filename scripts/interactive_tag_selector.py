@@ -72,6 +72,8 @@ class Script(Script):
         return None
 
     def process(self, p):
+        return
+
         if not ('@' in p.prompt or '@' in p.negative_prompt):
             return
 

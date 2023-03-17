@@ -25,7 +25,6 @@ class InteractiveTagSelector {
   }
 
   createTagButtons(tags, prefix = '') {
-    if (this.nsfwMode) { return null }
     if (Array.isArray(tags)) {
       return tags.map((tag) => this.createTagButton(tag, tag, 'secondary'))
     } else {
@@ -33,7 +32,14 @@ class InteractiveTagSelector {
         const values = tags[key]
         const randomKey = `${prefix}/${key}`
 
-        if (typeof values === 'string') { return this.createTagButton(key, values, 'secondary') }
+        if (typeof values === 'string') {
+          if (key.endsWith('-NSFW')) {
+            key = key.substring(0, key.length - 5)
+          } else if (this.nsfwMode) {
+            return null
+          }
+          return this.createTagButton(key, values, 'secondary')
+        }
 
         const group = document.createElement('div')
         group.classList.add('gr-block', 'gr-box', 'relative', 'w-full', 'border-solid', 'border', 'border-gray-200', 'flex', 'flex-col', 'col', 'flex-wrap', 'gap-2', 'p-2')
@@ -45,12 +51,11 @@ class InteractiveTagSelector {
         buttons.classList.add('gr-block', 'gr-box', 'relative', 'w-full', 'flex', 'flex-wrap')
         buttons.style = 'flex-direction: initial;'
 
-        const myTags = this.createTagButtons(values, randomKey)
-        if (myTags !== null) {
-            myTags.forEach((button) => {
-              buttons.appendChild(button)
-            })
-        }
+        this.createTagButtons(values, randomKey).forEach((button) => {
+          if (button !== null) {
+            buttons.appendChild(button)
+          }
+        })
 
         return group
       })
@@ -78,12 +83,12 @@ class InteractiveTagSelector {
         <div class="gr-block gr-box relative w-full border-solid border border-gray-200">
           <div class="flex flex-row flex-wrap w-full gap-2" style="align-items: center;">
             <select id="${this.SELECT_ID}" class="gr-box gr-input w-full" style="min-width: min(400px, 100%); flex: 3;">
-              <option>无</option>
+              <option>[无]</option>
             </select>
             <div style="min-width: min(200px, 100%); flex: 1">
               <label class="flex items-center text-gray-700 text-sm space-x-2 rounded-lg cursor-pointer dark:bg-transparent">
                 <input type="checkbox" id="${this.NSFW_MODE_ID}" class="gr-check-radio gr-checkbox">
-                <span class="ml-2">只显示NSFW提示词</span>
+                <span class="ml-2">🌸 NSFW 模式</span>
               </label>
             </div>
           </div>
@@ -94,6 +99,33 @@ class InteractiveTagSelector {
     const select = tagArea.querySelector(`#${this.SELECT_ID}`)
     const content = tagArea.querySelector(`#${this.CONTENT_ID}`)
     const nsfwModeCheckbox = tagArea.querySelector(`#${this.NSFW_MODE_ID}`)
+
+    select.addEventListener('change', (event) => {
+      this.selectTags(event.target.value, content)
+    })
+    nsfwModeCheckbox.addEventListener('change', (event) => {
+      this.nsfwMode = event.target.checked
+      this.updateTags(select, content, tags)
+    })
+    this.updateTags(select, content, tags)
+
+    gradioApp().getElementById('txt2img_toprow').after(tagArea)
+
+    const prompt = gradioApp().getElementById('txt2img_prompt').querySelector('textarea')
+    const promptNeg = gradioApp().getElementById('txt2img_neg_prompt').querySelector('textarea')
+    prompt.addEventListener('focus', () => {
+        this.promptFocus = prompt
+    })
+    promptNeg.addEventListener('focus', () => {
+        this.promptFocus = promptNeg
+    })
+    this.promptFocus = prompt
+  }
+
+  updateTags(select, content, tags) {
+    const selectValue = select.value
+    select.innerHTML = ''
+    content.innerHTML = ''
 
     Object.keys(tags).forEach((key) => {
       const values = tags[key]
@@ -108,40 +140,27 @@ class InteractiveTagSelector {
       container.classList.add('flex', 'flex-row', 'flex-wrap')
       container.style = 'display: none;'
 
-      const myTags = this.createTagButtons(values, key)
-      if (myTags !== null) {
-          myTags.forEach((group) => {
-            container.appendChild(group)
-          })
-      }
+      this.createTagButtons(values, key).forEach((group) => {
+        if (group !== null) {
+          container.appendChild(group)
+        }
+      })
 
       content.appendChild(container)
     })
 
-    select.addEventListener('change', (event) => {
-      const selected = event.target.value
-      Array.from(content.childNodes).forEach((node) => {
-        const visible = node.id === `interactive-tag-selector-container-${selected}`
-        this.changeVisibility(node, visible)
-      })
-    })
+    if (selectValue !== '[无]') {
+      select.value = selectValue
+    }
+    this.selectTags(select.value, content)
+    select.focus({preventScroll: true})
+  }
 
-    nsfwModeCheckbox.addEventListener('change', (event) => {
-      this.nsfwMode = event.target.checked
-      
+  selectTags(selected, content) {
+    Array.from(content.childNodes).forEach((node) => {
+      const visible = node.id === `interactive-tag-selector-container-${selected}`
+      this.changeVisibility(node, visible)
     })
-
-    gradioApp().getElementById('txt2img_toprow').after(tagArea)
-
-    const prompt = gradioApp().getElementById('txt2img_prompt').querySelector('textarea')
-    const promptNeg = gradioApp().getElementById('txt2img_neg_prompt').querySelector('textarea')
-    prompt.addEventListener('focus', () => {
-        this.promptFocus = prompt
-    })
-    promptNeg.addEventListener('focus', () => {
-        this.promptFocus = promptNeg
-    })
-    this.promptFocus = prompt
   }
 
   changeVisibility(node, visible) {
@@ -211,7 +230,7 @@ onUiLoaded(async () => {
   const tags = await interactiveTagSelector.parseFiles()
 
   const button = document.createElement('button')
-  button.textContent = '🔯提示词选择器'
+  button.textContent = '🔯 提示词选择器'
   button.classList.add('gr-button', 'gr-button-sm', 'gr-button-secondary')
   button.style = 'margin-top: 0.5rem;'
 

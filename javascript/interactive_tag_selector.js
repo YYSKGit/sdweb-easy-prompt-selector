@@ -30,7 +30,7 @@ class InteractiveTagSelector {
     } else {
       return Object.keys(tags).map((key) => {
         const values = tags[key]
-        const randomKey = `${prefix}/${key}`
+        let randomKey = `${prefix}/${key}`
 
         if (typeof values === 'string') {
           if (key.endsWith('-NSFW')) {

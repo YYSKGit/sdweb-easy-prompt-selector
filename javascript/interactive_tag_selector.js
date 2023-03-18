@@ -24,7 +24,7 @@ class InteractiveTagSelector {
     return await response.text();
   }
 
-  createTagButtons(tags, prefix = '') {
+  createTagButtons(tags, prefix = '',isTop) {
     if (Array.isArray(tags)) {
       return tags.map((tag) => this.createTagButton(tag, tag, 'secondary'))
     } else {
@@ -41,9 +41,11 @@ class InteractiveTagSelector {
           return this.createTagButton(key, values, 'secondary')
         }
 
+        const mSize = isTop ? '100%' :'50%'
         const group = document.createElement('div')
         group.classList.add('gr-block', 'gr-box', 'relative', 'w-full', 'border-solid', 'border', 'border-gray-200', 'flex', 'flex-col', 'col', 'flex-wrap', 'gap-2', 'p-2')
-        group.style = `min-width: min(320px, 100%); flex-basis: 50%; flex-grow: 1;`
+        group.style = `min-width: min(320px, 100%); flex-basis: ${mSize}; flex-grow: 1;`
+        randomKey = randomKey.replace(/-/g,'/')
         group.append(this.createTagButton(key, `__${randomKey}__`))
         group.insertAdjacentHTML('beforeend', '<div class="flex flex-col buttons"></div>')
 
@@ -51,7 +53,7 @@ class InteractiveTagSelector {
         buttons.classList.add('gr-block', 'gr-box', 'relative', 'w-full', 'flex', 'flex-wrap')
         buttons.style = 'flex-direction: initial;'
 
-        this.createTagButtons(values, randomKey).forEach((button) => {
+        this.createTagButtons(values, randomKey, false).forEach((button) => {
           if (button !== null) {
             buttons.appendChild(button)
           }
@@ -88,7 +90,7 @@ class InteractiveTagSelector {
             <div style="min-width: min(200px, 100%); flex: 1">
               <label class="flex items-center text-gray-700 text-sm space-x-2 rounded-lg cursor-pointer dark:bg-transparent">
                 <input type="checkbox" id="${this.NSFW_MODE_ID}" class="gr-check-radio gr-checkbox">
-                <span class="ml-2">🌸 NSFW 模式</span>
+                <span class="ml-2">🌸 NSFW</span>
               </label>
             </div>
           </div>
@@ -140,7 +142,7 @@ class InteractiveTagSelector {
       container.classList.add('flex', 'flex-row', 'flex-wrap')
       container.style = 'display: none;'
 
-      this.createTagButtons(values, key).forEach((group) => {
+      this.createTagButtons(values, key, true).forEach((group) => {
         if (group !== null) {
           container.appendChild(group)
         }

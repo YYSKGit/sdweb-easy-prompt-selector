@@ -1,15 +1,4 @@
-﻿其他:
-  "心/心形/爱心": "heart"
-  "含签名": "signature"
-  "含水印": "watermark"
-  "头部愤怒符号": "anger vein"
-  "中文文本": "chinese text"
-  "音效": "sound effects"
-  "八分音符": "beamed eighth notes"
-  "图上有表现出心动的文字": "heartbeat"
-  "尿素计量标识-NSFW": "urine meter"
-  "含用户名": "username"
-马赛克:
+﻿马赛克:
   "打码的": "censored"
   "马赛克审查": "mosaic censoring"
   "黑条打码": "bar censor"
@@ -49,3 +38,14 @@
   "表(流汗)无语的会话气泡": "spoken sweatdrop"
   "会话气泡里出现指代物": "spoken object"
   "空白语音气泡": "blank speech bubble"
+其他:
+  "心/心形/爱心": "heart"
+  "含签名": "signature"
+  "含水印": "watermark"
+  "头部愤怒符号": "anger vein"
+  "中文文本": "chinese text"
+  "音效": "sound effects"
+  "八分音符": "beamed eighth notes"
+  "图上有表现出心动的文字": "heartbeat"
+  "尿素计量标识-NSFW": "urine meter"
+  "含用户名": "username"

@@ -33,15 +33,6 @@
   "食物化": "foodification"
   "晚餐": "dinner"
   "一顿饭": "meal"
-节日:
-  "圣诞节": "christmas"
-  "万圣节": "halloween"
-  "情人节": "valentine"
-  "圣诞树": "christmas tree"
-  "圣诞快乐": "merry christmas"
-  "七夕节": "tanabata"
-  "圣诞彩灯": "christmas lights"
-  "生日派对/生日聚会": "birthday party"
 颜色:
   单色:
     "蓝色主题": "blue theme"
@@ -56,3 +47,12 @@
     "水蓝色主题": "aqua theme"
     "黑色主题": "black theme"
     "灰色主题": "grey theme"
+节日:
+  "圣诞节": "christmas"
+  "万圣节": "halloween"
+  "情人节": "valentine"
+  "圣诞树": "christmas tree"
+  "圣诞快乐": "merry christmas"
+  "七夕节": "tanabata"
+  "圣诞彩灯": "christmas lights"
+  "生日派对/生日聚会": "birthday party"

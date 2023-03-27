@@ -67,15 +67,6 @@
   "溪流": "stream"
   "海藻": "seaweed"
   "海底": "ocean bottom"
-时间:
-  "夜晚": "night"
-  "满月": "full moon"
-  "日落": "sunset"
-  "黄昏": "twilight"
-  "傍晚": "evening"
-  "黄昏-1": "dusk"
-  "日出": "sunrise"
-  "早晨": "morning"
 气象:
   "风": "wind"
   "雨": "rain"
@@ -91,3 +82,12 @@
   "气流": "visible air"
   "火山": "volcano"
   "漩涡": "swirl"
+时间:
+  "夜晚": "night"
+  "满月": "full moon"
+  "日落": "sunset"
+  "黄昏": "twilight"
+  "傍晚": "evening"
+  "黄昏-1": "dusk"
+  "日出": "sunrise"
+  "早晨": "morning"

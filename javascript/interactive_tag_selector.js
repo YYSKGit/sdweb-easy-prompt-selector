@@ -36,7 +36,7 @@ class ITSElementBuilder {
 
   // Elements
   static openButton({ onClick }) {
-    const button = ITSElementBuilder.baseButton('🔯提示词选择器', { size: 'sm', color: 'secondary' })
+    const button = ITSElementBuilder.baseButton('🔯 提示词选择器', { size: 'sm', color: 'secondary' })
     button.style = 'margin-top: 0.5rem;'
     button.addEventListener('click', onClick)
 
@@ -79,7 +79,7 @@ class ITSElementBuilder {
     select.style.margin = '2px'
     select.addEventListener('change', (event) => { onChange(event.target.value) })
 
-    const none = ['无']
+    const none = ['[无]']
     none.concat(options).forEach((key) => {
       const option = document.createElement('option')
       option.value = key
@@ -119,14 +119,15 @@ class InteractiveTagSelector {
   CONTENT_ID = 'interactive-tag-selector-content'
   
   MY_WHITE_CHARS = [' ', '\r', '\n']
-  MY_CLIPR_CHARS = [',', ':', "|", '(', '[', '{']
-  MY_CLIPL_CHARS = [',', ':', "|", ')', ']', '}']
+  MY_CLIPR_CHARS = [',', ':', '|', '(', '[', '{', '<']
+  MY_CLIPL_CHARS = [',', ':', '|', ')', ']', '}', '>']
 
   constructor(yaml, gradioApp) {
     this.yaml = yaml
     this.gradioApp = gradioApp
     this.visible = false
-    this.toNegative = false
+    this.nsfwMode = false
+    this.promptFocus = null
     this.tags = undefined
   }
 
@@ -171,8 +172,8 @@ class InteractiveTagSelector {
     row.appendChild(dropDown)
 
     const settings = document.createElement('div')
-    const checkbox = ITSElementBuilder.checkbox('写入到反向提示词', {
-      onChange: (checked) => { this.toNegative = checked }
+    const checkbox = ITSElementBuilder.checkbox('🌸 NSFW 模式', {
+      onChange: (checked) => { this.nsfwMode = checked }
     })
     settings.style.flex = '1'
     settings.appendChild(checkbox)
@@ -218,7 +219,9 @@ class InteractiveTagSelector {
       fields.style.marginTop = '10px'
 
       this.renderTagButtons(values, key).forEach((group) => {
-        fields.appendChild(group)
+        if (group !== null) {
+          fields.appendChild(group)
+        }
       })
 
       content.appendChild(fields)
@@ -235,7 +238,14 @@ class InteractiveTagSelector {
         const values = tags[key]
         const randomKey = `${prefix}/${key}`
 
-        if (typeof values === 'string') { return this.renderTagButton(key, values, 'secondary') }
+        if (typeof values === 'string') {
+          if (key.endsWith('-NSFW')) {
+            key = key.substring(0, key.length - 5)
+          } else if (this.nsfwMode) {
+            return null
+          }
+          return this.renderTagButton(key, values, 'secondary')
+        }
 
         const fields = ITSElementBuilder.tagFields()
         fields.style.flexDirection = 'column'
@@ -245,8 +255,11 @@ class InteractiveTagSelector {
         const buttons = ITSElementBuilder.tagFields()
         buttons.id = 'buttons'
         fields.append(buttons)
+
         this.renderTagButtons(values, randomKey).forEach((button) => {
-          buttons.appendChild(button)
+          if (button !== null) {
+            buttons.appendChild(button)
+          }
         })
 
         return fields
@@ -269,35 +282,35 @@ class InteractiveTagSelector {
   }
 
   addTag(tag) {
-    const id = this.toNegative ? 'txt2img_neg_prompt' : 'txt2img_prompt'
-    const textArea = gradioApp().getElementById(id).querySelector('textarea')
-    let mText = textArea.value
-    let mStart = textArea.selectionStart
+    const textArea = this.promptFocus
+    let mTextLeft = textArea.value.slice(0, textArea.selectionStart)
+    let mTextRight = textArea.value.slice(textArea.selectionEnd)
     
-    for (let i = mStart; i > 0; i --) {
-        let mTextClip = mText.slice(i - 1, i)
+    for (let i = mTextLeft.length; i > 0; i --) {
+        let mTextClip = mTextLeft.slice(i - 1, i)
         if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
             if (! this.MY_CLIPR_CHARS.includes(mTextClip)) {
-                tag = ", " + tag
+                tag = ', ' + tag
             }
             break
         }
     }
-    if (mStart === mText.length) {
-        tag = tag + ", "
-    } else {
-        for (let i = mStart; i < mText.length; i ++) {
-            let mTextClip = mText.slice(i, i + 1)
-            if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
-                if (! this.MY_CLIPL_CHARS.includes(mTextClip)) {
-                    tag = tag + ", "
-                }
-                break
+
+    for (let i = 0; i < mTextRight.length; i ++) {
+        let mTextClip = mTextRight.slice(i, i + 1)
+        if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
+            if (! this.MY_CLIPL_CHARS.includes(mTextClip)) {
+                tag = tag + ', '
             }
+            break
         }
     }
-    textArea.value = mText.slice(0, mStart) + tag + mText.slice(mStart)
-    textArea.selectionStart = mStart + tag.length
+    if (mTextRight.length === 0) {
+        tag = tag + ', '
+    }
+
+    textArea.value = mTextLeft + tag + mTextRight
+    textArea.selectionStart = mTextLeft.length + tag.length
     textArea.selectionEnd = textArea.selectionStart
     updateInput(textArea)
     

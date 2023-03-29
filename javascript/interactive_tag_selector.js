@@ -133,6 +133,16 @@ class InteractiveTagSelector {
 
   async init() {
     this.tags = await this.parseFiles()
+
+    const prompt = gradioApp().getElementById('txt2img_prompt').querySelector('textarea')
+    const promptNeg = gradioApp().getElementById('txt2img_neg_prompt').querySelector('textarea')
+    prompt.addEventListener('focus', () => {
+        this.promptFocus = prompt
+    })
+    promptNeg.addEventListener('focus', () => {
+        this.promptFocus = promptNeg
+    })
+    this.promptFocus = prompt
   }
 
   async readFile(filepath) {
@@ -173,7 +183,12 @@ class InteractiveTagSelector {
 
     const settings = document.createElement('div')
     const checkbox = ITSElementBuilder.checkbox('🌸 NSFW 模式', {
-      onChange: (checked) => { this.nsfwMode = checked }
+      onChange: (checked) => {
+          this.nsfwMode = checked
+          const content = gradioApp().getElementById(this.CONTENT_ID)
+          this.renderContent(content)
+          //this.updateTags(select, content)
+      }
     })
     settings.style.flex = '1'
     settings.appendChild(checkbox)
@@ -194,10 +209,7 @@ class InteractiveTagSelector {
       Object.keys(this.tags), {
         onChange: (selected) => {
           const content = gradioApp().getElementById(this.CONTENT_ID)
-          Array.from(content.childNodes).forEach((node) => {
-            const visible = node.id === `interactive-tag-selector-container-${selected}`
-            this.changeVisibility(node, visible)
-          })
+          selectTags(selected, content)
         }
       }
     )
@@ -205,9 +217,13 @@ class InteractiveTagSelector {
     return dropDown
   }
 
-  renderContent() {
-    const content = document.createElement('div')
-    content.id = this.CONTENT_ID
+  renderContent(content = null) {
+    if (content === null) {
+      content = document.createElement('div')
+      content.id = this.CONTENT_ID
+    } else {
+      content.innerHTML = ''
+    }
 
     Object.keys(this.tags).forEach((key) => {
       const values = this.tags[key]
@@ -273,6 +289,47 @@ class InteractiveTagSelector {
       onClick: () => { this.addTag(value) },
       onRightClick: (e) => { e.preventDefault(); this.removeTag(value) },
       color
+    })
+  }
+
+  updateTags(select, content) {
+    const selectValue = select.value
+    select.innerHTML = ''
+    content.innerHTML = ''
+
+    Object.keys(this.tags).forEach((key) => {
+      const values = this.tags[key]
+
+      const option = document.createElement('option')
+      option.value = key
+      option.textContent = key
+      select.appendChild(option)
+
+      const container = document.createElement('div')
+      container.id = `interactive-tag-selector-container-${key}`
+      container.classList.add('flex', 'flex-row', 'flex-wrap')
+      container.style = 'display: none;'
+
+      this.createTagButtons(values, key).forEach((group) => {
+        if (group !== null) {
+          container.appendChild(group)
+        }
+      })
+
+      content.appendChild(container)
+    })
+
+    if (selectValue !== '[无]') {
+      select.value = selectValue
+    }
+    this.selectTags(select.value, content)
+    select.focus({preventScroll: true})
+  }
+
+  selectTags(selected, content) {
+    Array.from(content.childNodes).forEach((node) => {
+      const visible = node.id === `interactive-tag-selector-container-${selected}`
+      this.changeVisibility(node, visible)
     })
   }
 

@@ -79,13 +79,13 @@ class ITSElementBuilder {
     select.style.margin = '2px'
     select.addEventListener('change', (event) => { onChange(event.target.value) })
 
-    const none = ['[无]']
-    none.concat(options).forEach((key) => {
+    options.forEach((key) => {
       const option = document.createElement('option')
       option.value = key
       option.textContent = key
       select.appendChild(option)
     })
+    select.value = options[0]
 
     return select
   }
@@ -181,25 +181,25 @@ class InteractiveTagSelector {
     dropDown.style.minWidth = '1'
     row.appendChild(dropDown)
 
-    const settings = document.createElement('div')
+    const content = this.renderContent()
     const checkbox = ITSElementBuilder.checkbox('🌸 NSFW 模式', {
       onChange: (checked) => {
           this.nsfwMode = checked
-          const content = gradioApp().getElementById(this.CONTENT_ID)
           this.renderContent(content)
-          //this.updateTags(select, content)
+          this.selectTags(dropDown.value, content)
+          dropDown.focus({preventScroll: true})
       }
     })
+    this.selectTags(dropDown.value, content)
+
+    const settings = document.createElement('div')
     settings.style.flex = '1'
     settings.appendChild(checkbox)
-
     row.appendChild(settings)
 
     const container = ITSElementBuilder.areaContainer(this.AREA_ID)
-
     container.appendChild(row)
-    container.appendChild(this.renderContent())
-
+    container.appendChild(content)
     return container
   }
 
@@ -209,7 +209,7 @@ class InteractiveTagSelector {
       Object.keys(this.tags), {
         onChange: (selected) => {
           const content = gradioApp().getElementById(this.CONTENT_ID)
-          selectTags(selected, content)
+          this.selectTags(selected, content)
         }
       }
     )
@@ -290,40 +290,6 @@ class InteractiveTagSelector {
       onRightClick: (e) => { e.preventDefault(); this.removeTag(value) },
       color
     })
-  }
-
-  updateTags(select, content) {
-    const selectValue = select.value
-    select.innerHTML = ''
-    content.innerHTML = ''
-
-    Object.keys(this.tags).forEach((key) => {
-      const values = this.tags[key]
-
-      const option = document.createElement('option')
-      option.value = key
-      option.textContent = key
-      select.appendChild(option)
-
-      const container = document.createElement('div')
-      container.id = `interactive-tag-selector-container-${key}`
-      container.classList.add('flex', 'flex-row', 'flex-wrap')
-      container.style = 'display: none;'
-
-      this.createTagButtons(values, key).forEach((group) => {
-        if (group !== null) {
-          container.appendChild(group)
-        }
-      })
-
-      content.appendChild(container)
-    })
-
-    if (selectValue !== '[无]') {
-      select.value = selectValue
-    }
-    this.selectTags(select.value, content)
-    select.focus({preventScroll: true})
   }
 
   selectTags(selected, content) {

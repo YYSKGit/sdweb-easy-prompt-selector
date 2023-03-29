@@ -36,7 +36,7 @@ class ITSElementBuilder {
 
   // Elements
   static openButton({ onClick }) {
-    const button = ITSElementBuilder.baseButton('🔯タグを選択', { size: 'sm', color: 'secondary' })
+    const button = ITSElementBuilder.baseButton('🔯提示词选择器', { size: 'sm', color: 'secondary' })
     button.style = 'margin-top: 0.5rem;'
     button.addEventListener('click', onClick)
 
@@ -79,7 +79,7 @@ class ITSElementBuilder {
     select.style.margin = '2px'
     select.addEventListener('change', (event) => { onChange(event.target.value) })
 
-    const none = ['なし']
+    const none = ['无']
     none.concat(options).forEach((key) => {
       const option = document.createElement('option')
       option.value = key
@@ -112,11 +112,15 @@ class ITSElementBuilder {
 }
 
 class InteractiveTagSelector {
+
   PATH_FILE = 'tmp/interactiveTagSelector.txt'
   AREA_ID = 'interactive-tag-selector'
   SELECT_ID = 'interactive-tag-selector-select'
   CONTENT_ID = 'interactive-tag-selector-content'
-  TO_NEGATIVE_PROMPT_ID = 'interactive-tag-selector-to-negative-prompt'
+  
+  MY_WHITE_CHARS = [' ', '\r', '\n']
+  MY_CLIPR_CHARS = [',', ':', "|", '(', '[', '{']
+  MY_CLIPL_CHARS = [',', ':', "|", ')', ']', '}']
 
   constructor(yaml, gradioApp) {
     this.yaml = yaml
@@ -167,7 +171,7 @@ class InteractiveTagSelector {
     row.appendChild(dropDown)
 
     const settings = document.createElement('div')
-    const checkbox = ITSElementBuilder.checkbox('ネガティブプロンプトに入力', {
+    const checkbox = ITSElementBuilder.checkbox('写入到反向提示词', {
       onChange: (checked) => { this.toNegative = checked }
     })
     settings.style.flex = '1'
@@ -229,14 +233,14 @@ class InteractiveTagSelector {
     } else {
       return Object.keys(tags).map((key) => {
         const values = tags[key]
-        const randomKey = `${prefix}:${key}`
+        const randomKey = `${prefix}/${key}`
 
         if (typeof values === 'string') { return this.renderTagButton(key, values, 'secondary') }
 
         const fields = ITSElementBuilder.tagFields()
         fields.style.flexDirection = 'column'
 
-        fields.append(this.renderTagButton(key, `@${randomKey}@`))
+        fields.append(this.renderTagButton(key, `__${randomKey}__`))
 
         const buttons = ITSElementBuilder.tagFields()
         buttons.id = 'buttons'
@@ -266,26 +270,39 @@ class InteractiveTagSelector {
 
   addTag(tag) {
     const id = this.toNegative ? 'txt2img_neg_prompt' : 'txt2img_prompt'
-    const textarea = gradioApp().getElementById(id).querySelector('textarea')
-
-    if (textarea.value.trim() !== '' && textarea.value.trim().slice(-1) !== ',') { textarea.value += ', ' }
-    textarea.value += tag
-
-    updateInput(textarea)
-  }
-
-  removeTag(tag) {
-    const id = this.toNegative ? 'txt2img_neg_prompt' : 'txt2img_prompt'
-    const textarea = gradioApp().getElementById(id).querySelector('textarea')
-
-    if (textarea.value.trimStart().startsWith(tag)) {
-      const matched = textarea.value.match(new RegExp(`${tag.replace(/[-\/\\^$*+?.()|\[\]{}]/g, '\\$&') },*`))
-      textarea.value = textarea.value.replace(matched[0], '').trimStart()
-    } else {
-      textarea.value = textarea.value.replace(`, ${tag}`, '')
+    const textArea = gradioApp().getElementById(id).querySelector('textarea')
+    let mText = textArea.value
+    let mStart = textArea.selectionStart
+    
+    for (let i = mStart; i > 0; i --) {
+        let mTextClip = mText.slice(i - 1, i)
+        if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
+            if (! this.MY_CLIPR_CHARS.includes(mTextClip)) {
+                tag = ", " + tag
+            }
+            break
+        }
     }
-
-    updateInput(textarea)
+    if (mStart === mText.length) {
+        tag = tag + ", "
+    } else {
+        for (let i = mStart; i < mText.length; i ++) {
+            let mTextClip = mText.slice(i, i + 1)
+            if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
+                if (! this.MY_CLIPL_CHARS.includes(mTextClip)) {
+                    tag = tag + ", "
+                }
+                break
+            }
+        }
+    }
+    textArea.value = mText.slice(0, mStart) + tag + mText.slice(mStart)
+    textArea.selectionStart = mStart + tag.length
+    textArea.selectionEnd = textArea.selectionStart
+    updateInput(textArea)
+    
+    textArea.focus({preventScroll: true})
+    gradioApp().getElementById(this.SELECT_ID).focus({preventScroll: true})
   }
 }
 

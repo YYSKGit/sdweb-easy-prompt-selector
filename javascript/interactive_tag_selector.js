@@ -182,7 +182,7 @@ class InteractiveTagSelector {
     row.appendChild(dropDown)
 
     const content = this.renderContent()
-    const checkbox = ITSElementBuilder.checkbox('🌸 NSFW 模式', {
+    const checkbox = ITSElementBuilder.checkbox('🌸 NSFW', {
       onChange: (checked) => {
           this.nsfwMode = checked
           this.renderContent(content)
@@ -234,7 +234,7 @@ class InteractiveTagSelector {
       fields.style.flexDirection = 'row'
       fields.style.marginTop = '10px'
 
-      this.renderTagButtons(values, key).forEach((group) => {
+      this.renderTagButtons(values, key, true).forEach((group) => {
         if (group !== null) {
           fields.appendChild(group)
         }
@@ -246,13 +246,13 @@ class InteractiveTagSelector {
     return content
   }
 
-  renderTagButtons(tags, prefix = '') {
+  renderTagButtons(tags, prefix = '', isTop) {
     if (Array.isArray(tags)) {
       return tags.map((tag) => this.renderTagButton(tag, tag, 'secondary'))
     } else {
       return Object.keys(tags).map((key) => {
         const values = tags[key]
-        const randomKey = `${prefix}/${key}`
+        let randomKey = `${prefix}/${key}`
 
         if (typeof values === 'string') {
           if (key.endsWith('-NSFW')) {
@@ -264,15 +264,19 @@ class InteractiveTagSelector {
         }
 
         const fields = ITSElementBuilder.tagFields()
+        if (isTop) {
+          fields.style.flex = '1 calc(100% - 10px)'
+        }
         fields.style.flexDirection = 'column'
 
+        randomKey = randomKey.replace(/-/g,'/')
         fields.append(this.renderTagButton(key, `__${randomKey}__`))
 
         const buttons = ITSElementBuilder.tagFields()
         buttons.id = 'buttons'
         fields.append(buttons)
 
-        this.renderTagButtons(values, randomKey).forEach((button) => {
+        this.renderTagButtons(values, randomKey, false).forEach((button) => {
           if (button !== null) {
             buttons.appendChild(button)
           }
@@ -339,6 +343,20 @@ class InteractiveTagSelector {
     
     textArea.focus({preventScroll: true})
     gradioApp().getElementById(this.SELECT_ID).focus({preventScroll: true})
+  }
+
+  removeTag(tag) {
+    const id = this.toNegative ? 'txt2img_neg_prompt' : 'txt2img_prompt'
+    const textarea = gradioApp().getElementById(id).querySelector('textarea')
+
+    if (textarea.value.trimStart().startsWith(tag)) {
+      const matched = textarea.value.match(new RegExp(`${tag.replace(/[-\/\\^$*+?.()|\[\]{}]/g, '\\$&') },*`))
+      textarea.value = textarea.value.replace(matched[0], '').trimStart()
+    } else {
+      textarea.value = textarea.value.replace(`, ${tag}`, '')
+    }
+
+    updateInput(textarea)
   }
 }
 

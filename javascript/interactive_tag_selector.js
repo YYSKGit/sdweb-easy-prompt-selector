@@ -310,34 +310,33 @@ class InteractiveTagSelector {
 
   addTag(tag) {
     const textArea = this.promptFocus
-    let mTextLeft = textArea.value.slice(0, textArea.selectionStart)
-    let mTextRight = textArea.value.slice(textArea.selectionEnd)
-    
-    for (let i = mTextLeft.length; i > 0; i --) {
-        let mTextClip = mTextLeft.slice(i - 1, i)
-        if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
-            if (! this.MY_CLIPR_CHARS.includes(mTextClip)) {
-                tag = ', ' + tag
-            }
-            break
-        }
-    }
+    const textStart = textArea.selectionStart
+    const textEnd = textArea.selectionEnd
+    const textValue = textArea.value.slice(0, textStart) + textArea.value.slice(textEnd)
+    const textTags = textValue.split(",");
 
-    for (let i = 0; i < mTextRight.length; i ++) {
-        let mTextClip = mTextRight.slice(i, i + 1)
-        if (! this.MY_WHITE_CHARS.includes(mTextClip)) {
-            if (! this.MY_CLIPL_CHARS.includes(mTextClip)) {
-                tag = tag + ', '
-            }
-            break
+    //获取光标所在标签索引
+    const textTagsIndex = textTags.reduce((accumulator, currentValue) => {
+      if (! accumulator.stop) {
+        const currentSum = accumulator.sum + accumulator.index + currentValue.length
+        if (currentSum < textStart) {
+          accumulator.sum = currentSum
+          accumulator.index ++
+        } else {
+          accumulator.stop = true
         }
-    }
-    if (mTextRight.length === 0) {
-        tag = tag + ', '
-    }
+      }
+      return accumulator
+    }, {sum:0, index:0, stop:false})
 
-    textArea.value = mTextLeft + tag + mTextRight
-    textArea.selectionStart = mTextLeft.length + tag.length
+    if (textTagsIndex.index === textTags.length) {
+      textTags.push("")
+    }
+    const textTag = textTags[textTagsIndex.index + 1]
+
+    textTags[textTagsIndex.index + 1] = tag
+    textArea.value = textTags.join(",")
+    textArea.selectionStart = textStart + tag.length
     textArea.selectionEnd = textArea.selectionStart
     updateInput(textArea)
     
